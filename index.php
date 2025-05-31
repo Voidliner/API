@@ -1,19 +1,17 @@
 <?php
-// Set the response content type to JSON
+// Set response header
 header('Content-Type: application/json');
 
-// Sample data to return
-$data = [
+// Determine request method
+$method = $_SERVER['REQUEST_METHOD'];
+
+// Prepare response
+$response = [
     "status" => "success",
-    "message" => "Hello from the PHP API!",
-    "timestamp" => date("Y-m-d H:i:s"),
-    "data" => [
-        "name" => "ChatGPT",
-        "version" => "1.0",
-        "features" => ["json response", "easy integration", "fast"]
-    ]
+    "method" => $method,
+    "message" => "You made a $method request"
 ];
 
-// Encode data as JSON and output it
-echo json_encode($data);
+// Output JSON
+echo json_encode($response);
 ?>

@@ -6,24 +6,14 @@ $dbname = 'api_database_n9x1';
 $user = 'api_database_n9x1_user';
 $password = 'ZY2yoYoXypv0HYqJ6zwPxUcQhEBtQYT8';
 
-// Get parameters from URL
-$username = $_GET['username'] ?? null;
-$password_input = $_GET['password'] ?? null;
-
 // Set response header
 header('Content-Type: application/json');
 
-// Check for required parameters
-if (!$username || !$password_input) {
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'Missing username or password in the URL parameters.'
-    ]);
-    exit;
-}
+// Get 'mode' from URL
+$mode = $_GET['mode'] ?? 'insert';
 
+// Connect to PostgreSQL
 try {
-    // Connect to PostgreSQL
     $dsn = "pgsql:host=$host;port=$port;dbname=$dbname;";
     $pdo = new PDO($dsn, $user, $password, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
@@ -39,20 +29,50 @@ try {
         )
     ");
 
-    // Insert user data
-    $stmt = $pdo->prepare("INSERT INTO users (username, password) VALUES (:username, :password)");
-    $stmt->execute([
-        ':username' => $username,
-        ':password' => $password_input // ⚠️ Optional: Use password_hash() for security
-    ]);
+    if ($mode === 'insert') {
+        // Insert mode
+        $username = $_GET['username'] ?? null;
+        $password_input = $_GET['password'] ?? null;
 
-    echo json_encode([
-        'status' => 'success',
-        'message' => 'User data inserted successfully.',
-        'data' => [
-            'username' => $username
-        ]
-    ]);
+        if (!$username || !$password_input) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Missing username or password in the URL parameters.'
+            ]);
+            exit;
+        }
+
+        $stmt = $pdo->prepare("INSERT INTO users (username, password) VALUES (:username, :password)");
+        $stmt->execute([
+            ':username' => $username,
+            ':password' => $password_input // ⚠️ Store as plain text; not secure!
+        ]);
+
+        echo json_encode([
+            'status' => 'success',
+            'message' => 'User data inserted successfully.',
+            'data' => [
+                'username' => $username
+            ]
+        ]);
+    } elseif ($mode === 'get') {
+        // Get mode: fetch all credentials
+        $stmt = $pdo->query("SELECT id, username, password, created_at FROM users ORDER BY id ASC");
+        $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            'status' => 'success',
+            'message' => 'Retrieved user data.',
+            'count' => count($users),
+            'data' => $users
+        ]);
+    } else {
+        // Unknown mode
+        echo json_encode([
+            'status' => 'error',
+            'message' => "Invalid mode: '$mode'. Use 'insert' or 'get'."
+        ]);
+    }
 } catch (PDOException $e) {
     echo json_encode([
         'status' => 'error',

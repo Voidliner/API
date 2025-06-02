@@ -68,13 +68,6 @@ try {
         ]);
 
     } elseif ($mode === 'delete_all') {
-        // Optional: Simple protection via secret key (optional, comment out if not needed)
-        // $secret = $_GET['secret'] ?? '';
-        // if ($secret !== 'my_secret_key') {
-        //     echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
-        //     exit;
-        // }
-
         // Delete all users
         $pdo->exec("DELETE FROM users");
 
@@ -83,11 +76,37 @@ try {
             'message' => 'All users have been deleted.'
         ]);
 
+    } elseif ($mode === 'drop_all_tables') {
+        // ⚠️ Danger: Drop all tables (requires secret)
+        $secret = $_GET['secret'] ?? '';
+        if ($secret !== 'my_super_secret_key') {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Unauthorized. Invalid or missing secret key.'
+            ]);
+            exit;
+        }
+
+        // Get all public tables
+        $tablesStmt = $pdo->query("
+            SELECT tablename FROM pg_tables WHERE schemaname = 'public'
+        ");
+        $tables = $tablesStmt->fetchAll(PDO::FETCH_COLUMN);
+
+        foreach ($tables as $table) {
+            $pdo->exec("DROP TABLE IF EXISTS \"$table\" CASCADE");
+        }
+
+        echo json_encode([
+            'status' => 'success',
+            'message' => 'All tables have been dropped from the database.'
+        ]);
+
     } else {
         // Invalid mode
         echo json_encode([
             'status' => 'error',
-            'message' => "Invalid mode: '$mode'. Use 'insert', 'get', or 'delete_all'."
+            'message' => "Invalid mode: '$mode'. Use 'insert', 'get', 'delete_all', or 'drop_all_tables'."
         ]);
     }
 

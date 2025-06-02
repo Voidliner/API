@@ -8,6 +8,7 @@ $password = 'ZY2yoYoXypv0HYqJ6zwPxUcQhEBtQYT8';
 
 // Set response header
 header('Content-Type: application/json');
+header("Access-Control-Allow-Origin: *");
 
 // Get 'mode' from URL
 $mode = $_GET['mode'] ?? 'insert';

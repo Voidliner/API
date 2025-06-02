@@ -1,4 +1,8 @@
 <?php
+// Allow CORS for browser requests
+header("Access-Control-Allow-Origin: *");
+header('Content-Type: application/json');
+
 // Database credentials
 $host = 'dpg-d0ti432dbo4c739nguq0-a';
 $port = '5432';
@@ -6,15 +10,11 @@ $dbname = 'api_database_n9x1';
 $user = 'api_database_n9x1_user';
 $password = 'ZY2yoYoXypv0HYqJ6zwPxUcQhEBtQYT8';
 
-// Set response header
-header('Content-Type: application/json');
-header("Access-Control-Allow-Origin: *");
-
 // Get 'mode' from URL
 $mode = $_GET['mode'] ?? 'insert';
 
-// Connect to PostgreSQL
 try {
+    // Connect to PostgreSQL
     $dsn = "pgsql:host=$host;port=$port;dbname=$dbname;";
     $pdo = new PDO($dsn, $user, $password, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
@@ -31,7 +31,7 @@ try {
     ");
 
     if ($mode === 'insert') {
-        // Insert mode
+        // Insert user
         $username = $_GET['username'] ?? null;
         $password_input = $_GET['password'] ?? null;
 
@@ -46,18 +46,17 @@ try {
         $stmt = $pdo->prepare("INSERT INTO users (username, password) VALUES (:username, :password)");
         $stmt->execute([
             ':username' => $username,
-            ':password' => $password_input // ⚠️ Store as plain text; not secure!
+            ':password' => $password_input // ⚠️ Storing as plain text (consider hashing in real apps)
         ]);
 
         echo json_encode([
             'status' => 'success',
             'message' => 'User data inserted successfully.',
-            'data' => [
-                'username' => $username
-            ]
+            'data' => ['username' => $username]
         ]);
+
     } elseif ($mode === 'get') {
-        // Get mode: fetch all credentials
+        // Fetch all users
         $stmt = $pdo->query("SELECT id, username, password, created_at FROM users ORDER BY id ASC");
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -67,17 +66,34 @@ try {
             'count' => count($users),
             'data' => $users
         ]);
+
+    } elseif ($mode === 'delete_all') {
+        // Optional: Simple protection via secret key (optional, comment out if not needed)
+        // $secret = $_GET['secret'] ?? '';
+        // if ($secret !== 'my_secret_key') {
+        //     echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
+        //     exit;
+        // }
+
+        // Delete all users
+        $pdo->exec("DELETE FROM users");
+
+        echo json_encode([
+            'status' => 'success',
+            'message' => 'All users have been deleted.'
+        ]);
+
     } else {
-        // Unknown mode
+        // Invalid mode
         echo json_encode([
             'status' => 'error',
-            'message' => "Invalid mode: '$mode'. Use 'insert' or 'get'."
+            'message' => "Invalid mode: '$mode'. Use 'insert', 'get', or 'delete_all'."
         ]);
     }
+
 } catch (PDOException $e) {
     echo json_encode([
         'status' => 'error',
         'message' => 'Database error: ' . $e->getMessage()
     ]);
 }
-?>

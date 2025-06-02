@@ -20,13 +20,13 @@ try {
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
     ]);
 
-    // Create 'users' table if it doesn't exist
+    // Recreate users table with new ID system
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
+            custom_id VARCHAR(20) UNIQUE NOT NULL,
             username VARCHAR(255) NOT NULL,
-            password TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            password TEXT NOT NULL
         )
     ");
 
@@ -43,21 +43,31 @@ try {
             exit;
         }
 
-        $stmt = $pdo->prepare("INSERT INTO users (username, password) VALUES (:username, :password)");
+        // Generate timestamp-based custom ID (with random suffix to prevent collisions)
+        $custom_id = date('YmdHis') . rand(10, 99);
+
+        $stmt = $pdo->prepare("
+            INSERT INTO users (custom_id, username, password)
+            VALUES (:custom_id, :username, :password)
+        ");
         $stmt->execute([
+            ':custom_id' => $custom_id,
             ':username' => $username,
-            ':password' => $password_input // ⚠️ Storing as plain text (consider hashing in real apps)
+            ':password' => $password_input
         ]);
 
         echo json_encode([
             'status' => 'success',
             'message' => 'User data inserted successfully.',
-            'data' => ['username' => $username]
+            'data' => [
+                'custom_id' => $custom_id,
+                'username' => $username
+            ]
         ]);
 
     } elseif ($mode === 'get') {
         // Fetch all users
-        $stmt = $pdo->query("SELECT id, username, password, created_at FROM users ORDER BY id ASC");
+        $stmt = $pdo->query("SELECT id, custom_id, username, password FROM users ORDER BY id ASC");
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         echo json_encode([
